@@ -1,142 +1,261 @@
-# Importar los módulos necesarios
 import csv
-import pandas as pd
-import os
-import plotly.graph_objects as go
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib import colors
+from reportlab.lib.styles import ParagraphStyle
+from openpyxl.styles import PatternFill
+import matplotlib.pyplot as plt
+import numpy as np
 
-# Función para calcular la amortización
-def calcular_amortizacion(factor_amortizacion, tasa_de_interes, valor_presente, numero_pagos):
-    # Inicializar una lista para almacenar los detalles de cada pago
-    detalles_pagos = []
-    saldo = valor_presente
+# Función para graficar barras agrupadas
+def grafico_barras_agrupadas(detalles_pagos):
+    elementos = ["Cuota", "Saldo", "Interes", "Amortizacion"]
     
-    # Iterar sobre el número de pagos especificado
+    pagos = [pago[0] for pago in detalles_pagos]
+    cuotas = [pago[1] for pago in detalles_pagos]
+    saldos = [pago[2] for pago in detalles_pagos]
+    intereses = [pago[3] for pago in detalles_pagos]
+    amortizaciones = [pago[4] for pago in detalles_pagos]
+    
+    fig, ax = plt.subplots(layout='constrained')
+    width = 0.2
+    x = np.arange(len(pagos)) 
+
+    ax.bar(x, cuotas, width, label="Cuota", color='blue')
+    ax.bar(x + width, saldos, width, label="Saldo", color='green')
+    ax.bar(x + 2 * width, intereses, width, label="Interes", color='orange')
+    ax.bar(x + 3 * width, amortizaciones, width, label="Amortizacion", color='red')
+
+    ax.set_ylabel('Cantidad')
+    ax.set_title('Evolución de la Amortización')
+    ax.set_xticks(x + 1.5 * width, pagos)
+    ax.legend(loc='upper left', ncols=4)
+    plt.show()
+
+# Gráfico Broken Barh
+def grafico_broken_barh(detalles_pagos):
+    fig, ax = plt.subplots(layout='constrained')
+    for i, pago in enumerate(detalles_pagos):
+        cuota, saldo, interes, amortizacion = pago[1:]
+        ax.broken_barh([(i, cuota)], (0, 10), facecolors='blue')
+        ax.broken_barh([(i, saldo)], (10, 20), facecolors='green')
+        ax.broken_barh([(i, interes)], (20, 30), facecolors='orange')
+        ax.broken_barh([(i, amortizacion)], (30, 40), facecolors='red')
+    ax.set_yticks([5, 15, 25, 35], ["Cuota", "Saldo", "Interes", "Amortizacion"])
+    ax.set_xlabel('Pago')
+    ax.set_title('Evolución de la Amortización')
+    plt.show()
+
+# Gráfico de Coherencia de dos señales
+def grafico_coherencia(detalles_pagos):
+    cuotas = [pago[1] for pago in detalles_pagos]
+    intereses = [pago[3] for pago in detalles_pagos]
+    
+    fig, ax = plt.subplots(layout='constrained')
+    ax.cohere(cuotas, intereses, NFFT=256, Fs=1)
+    ax.set_title('Coherencia entre Cuotas e Intereses')
+    plt.show()
+
+# Gráfico con fill_between
+def grafico_fill_between(detalles_pagos):
+    pagos = [pago[0] for pago in detalles_pagos]
+    saldos = [pago[2] for pago in detalles_pagos]
+
+    fig, ax = plt.subplots(layout='constrained')
+    ax.plot(pagos, saldos, color='green')
+    ax.fill_between(pagos, 0, saldos, where=(np.array(saldos) > 0), color='green', alpha=0.3)
+    ax.set_xlabel('Pago')
+    ax.set_ylabel('Saldo')
+    ax.set_title('Saldo Restante en Cada Pago')
+    plt.show()
+
+# Gráfico de Densidad Espectral Cruzada (CSD)
+def grafico_csd(detalles_pagos):
+    cuotas = [pago[1] for pago in detalles_pagos]
+    amortizaciones = [pago[4] for pago in detalles_pagos]
+
+    fig, ax = plt.subplots(layout='constrained')
+    ax.csd(cuotas, amortizaciones, NFFT=256, Fs=1)
+    ax.set_title('Densidad Espectral Cruzada entre Cuotas y Amortizaciones')
+    plt.show()
+
+# Gráfico de barras agrupadas
+def grafico_barras_agrupadas(detalles_pagos):
+    elementos = ["Cuota", "Saldo", "Interes", "Amortizacion"]
+    
+    pagos = [pago[0] for pago in detalles_pagos]
+    cuotas = [pago[1] for pago in detalles_pagos]
+    saldos = [pago[2] for pago in detalles_pagos]
+    intereses = [pago[3] for pago in detalles_pagos]
+    amortizaciones = [pago[4] for pago in detalles_pagos]
+    
+    fig, ax = plt.subplots(layout='constrained')
+    width = 0.2
+    x = np.arange(len(pagos)) 
+
+    ax.bar(x, cuotas, width, label="Cuota", color='blue')
+    ax.bar(x + width, saldos, width, label="Saldo", color='green')
+    ax.bar(x + 2 * width, intereses, width, label="Interes", color='orange')
+    ax.bar(x + 3 * width, amortizaciones, width, label="Amortizacion", color='red')
+
+    ax.set_ylabel('Cantidad')
+    ax.set_title('Evolución de la Amortización')
+    ax.set_xticks(x + 1.5 * width, pagos)
+    ax.legend(loc='upper left', ncols=4)
+    plt.show()
+    
+# Función principal para seleccionar el gráfico
+def seleccionar_grafico(tipo, detalles_pagos):
+    if tipo == '1':
+        grafico_barras_agrupadas(detalles_pagos)
+    elif tipo == '2':
+        grafico_broken_barh(detalles_pagos)
+    elif tipo == '3':
+        grafico_coherencia(detalles_pagos)
+    elif tipo == '4':
+        grafico_fill_between(detalles_pagos)
+    elif tipo == '5':
+        grafico_csd(detalles_pagos)
+    else:
+        print("Tipo de gráfico no reconocido. Por favor, elija un tipo válido.")
+
+# Función para crear lista de datos para exportación
+def crear_lista_datos(detalles_pagos):
+    lista_datos = [["Pago", "Cuota", "Saldo", "Interes", "Amortizacion"]]
+    for pago in detalles_pagos:
+        lista_datos.append(list(pago))
+    return lista_datos
+
+# Función para exportar a PDF
+def exportar_a_pdf(detalles_pagos, file_path, color1=colors.beige, color2=colors.white):
+    try:
+        doc = SimpleDocTemplate(file_path, pagesize=letter)
+        elements = []
+
+        data = [["Pago", "Cuota", "Saldo", "Interes", "Amortizacion"]]
+        for i, (pago, cuota, saldo, interes, amortizacion) in enumerate(detalles_pagos):
+            data.append([Paragraph(str(pago), ParagraphStyle(name='Normal')), 
+                        Paragraph(str(cuota), ParagraphStyle(name='Normal')), 
+                        Paragraph(str(saldo), ParagraphStyle(name='Normal')), 
+                        Paragraph(str(interes), ParagraphStyle(name='Normal')), 
+                        Paragraph(str(amortizacion), ParagraphStyle(name='Normal'))])
+        tabla = Table(data)
+        tabla.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                ('BACKGROUND', (0, 1), (-1, -1), color1),
+                                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [color1, color2]),
+                                ('GRID', (0, 0), (-1, -1), 1, colors.magenta)]))
+        elements.append(tabla)
+        doc.build(elements)
+        print(f"Los detalles de cada pago se han exportado a '{file_path}' en formato PDF.")
+    except Exception as e:
+        print(f"Ocurrió un error al exportar a PDF: {e}")
+
+# Función para exportar a Excel
+def exportar_a_excel(detalles_pagos, file_path, color1='DDDDDD', color2='FFFFFF'):
+    try:
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.append(["Pago", "Cuota", "Saldo", "Interes", "Amortizacion"])
+        for i, (pago, cuota, saldo, interes, amortizacion) in enumerate(detalles_pagos):
+            color = color1 if i % 2 == 0 else color2
+            sheet.append([pago, cuota, saldo, interes, amortizacion])
+            for col in range(1, 6): # Columnas de A a E
+                cell = sheet.cell(row=i+2, column=col) # +2 para ajustar el índice de fila
+                cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+        workbook.save(file_path)
+        print(f"Los detalles de cada pago se han exportado a '{file_path}' en formato Excel.")
+    except Exception as e:
+        print(f"Ocurrió un error al exportar a Excel: {e}")
+
+# Función principal para calcular la amortización de un préstamo
+def calcular_amortizacion(factor_amortizacion, tasa_de_interes, valor_presente, numero_pagos):
+    detalles_pagos = []  # Lista para almacenar los detalles de cada pago
+    saldo = valor_presente  # Saldo inicial del préstamo
+    
+    # Iterar sobre cada pago
     for pago in range(1, numero_pagos + 1):
-        # Calcular el interés para este pago
+        # Calcular el interés del pago
         interes = saldo * tasa_de_interes / 12
-        # Calcular la amortización para este pago
+        # Calcular la amortización del pago
         amortizacion = factor_amortizacion * valor_presente
-        # Calcular la cuota total para este pago
+        # Calcular la cuota del pago (interés + amortización)
         cuota = interes + amortizacion
         # Actualizar el saldo restante
         saldo -= amortizacion
-        # Agregar los detalles de este pago a la lista
+        # Agregar los detalles del pago a la lista
         detalles_pagos.append((pago, cuota, saldo, interes, amortizacion))
     
-    # Calcular el interés total pagado durante toda la amortización
+    # Calcular el interés total pagado durante el período de amortización
     interes_total_pagado = valor_presente * tasa_de_interes * numero_pagos / 12
-    # Devolver el interés total pagado y los detalles de cada pago
+    
+    # Retornar el interés total pagado y los detalles de cada pago
     return interes_total_pagado, detalles_pagos
 
-# Función para exportar los detalles de cada pago a un archivo CSV
-def exportar_a_csv(detalles_pagos, file_path):
-    # Abrir el archivo CSV para escritura
-    with open(file_path, mode="w", newline="") as file:
-        # Crear un escritor CSV
-        writer = csv.writer(file)
-        # Escribir la primera fila con los nombres de las columnas
-        writer.writerow(["Pago", "Cuota", "Saldo", "Interes", "Amortizacion"])
-        # Iterar sobre los detalles de cada pago y escribirlos en el archivo CSV
-        for pago, cuota, saldo, interes, amortizacion in detalles_pagos:
-            writer.writerow([pago, f"{cuota:.2f}", f"{saldo:.2f}", f"{interes:.2f}", f"{amortizacion:.2f}"])
-    
-    # Imprimir un mensaje indicando que los detalles se han exportado correctamente
-    print(f"Los detalles de cada pago se han exportado a '{file_path}'.")
 
-# Función para graficar los detalles de amortización
-def graficar_amortizacion(detalles_pagos):
-    # Crear un DataFrame de pandas a partir de los detalles de pago
-    df = pd.DataFrame(detalles_pagos, columns=["Pago", "Cuota", "Saldo", "Interes", "Amortizacion"])
-
-    # Crear un objeto de figura de Plotly
-    fig = go.Figure(data=[
-        go.Bar(name='Cuota', x=df['Pago'], y=df['Cuota'], text=df['Cuota'], textposition='auto'),
-        go.Bar(name='Saldo', x=df['Pago'], y=df['Saldo'], text=df['Saldo'], textposition='auto'),
-        go.Bar(name='Interes', x=df['Pago'], y=df['Interes'], text=df['Interes'], textposition='auto'),
-        go.Bar(name='Amortizacion', x=df['Pago'], y=df['Amortizacion'], text=df['Amortizacion'], textposition='auto'),
-    ])
-
-    # Actualizar el diseño de la figura
-    fig.update_layout(
-        title="Detalles de cada pago",
-        xaxis_title="Pago",
-        yaxis_title="Cantidad",
-        barmode='stack'
-    )
-
-    # Mostrar la figura
-    fig.show()
-
-# Función para solicitar un número decimal al usuario
-def solicitar_numero(mensaje):
-    while True:
-        try:
-            valor = float(input(mensaje))
-            if valor <= 0:
-                raise ValueError("El valor debe ser mayor que cero.")
-            return valor
-        except ValueError:
-            print("Error: Por favor, ingrese un número válido.")
-
-# Función para solicitar un número entero al usuario
-def solicitar_entero(mensaje):
-    while True:
-        try:
-            valor = int(input(mensaje))
-            if valor <= 0:
-                raise ValueError("El valor debe ser mayor que cero.")
-            return valor
-        except ValueError:
-            print("Error: Por favor, ingrese un número entero válido.")
-
-# Función principal del programa
+# Función principal
 def main():
     try:
-        # Solicitar la tasa de interés anual al usuario
-        tasa_de_interes = solicitar_numero("Ingrese la tasa de interés anual (en decimal): ")
-        # Verificar que la tasa de interés esté dentro del rango permitido
-        if not 0 < tasa_de_interes < 1.1:
+        # Solicitar al usuario el formato de exportación deseado
+        formato_exportacion = input("Seleccione el formato de exportación (CSV/PDF/Excel): ").lower()
+
+        # Especificar la ubicación completa del archivo
+        file_name = input("Ingrese el nombre del archivo:") 
+        if not file_name.endswith('.' + formato_exportacion):
+            file_name += '.' + formato_exportacion
+            
+        # Calcular el factor de amortización
+
+
+        # Validar los datos de entrada
+        if tasa_de_interes <= 0 or tasa_de_interes >= 1.1:
             raise ValueError("La tasa de interés debe estar entre 0 y 1.")
-
-        # Solicitar el valor presente al usuario
-        valor_presente = solicitar_numero("Ingrese el valor presente: ")
-
-        # Solicitar el número de pagos al usuario
-        numero_pagos = solicitar_entero("Ingrese el número de pagos: ")
-        # Verificar que el número de pagos esté dentro del rango permitido
-        if not 0 < numero_pagos <= 12:
+        if valor_presente <= 0:
+            raise ValueError("El valor presente debe ser mayor a cero")
+        if numero_pagos <= 0 or numero_pagos > 12:
             raise ValueError("El número de pagos debe ser mayor que 0 y menor o igual que 12")
 
-        # Calcular la tasa de interés periódica
-        tasa_interes_periodica = tasa_de_interes / 12
-
         # Calcular el factor de amortización
+        tasa_interes_periodica = tasa_de_interes / 12
         factor_amortizacion = (1 - (1 + tasa_interes_periodica)**-numero_pagos) / (tasa_interes_periodica * (1 + tasa_interes_periodica)**-numero_pagos)
 
-        # Calcular la amortización y el interés total pagado
+        # Calcular la amortización y obtener los detalles de cada pago
         interes_total_pagado, detalles_pagos = calcular_amortizacion(factor_amortizacion, tasa_de_interes, valor_presente, numero_pagos)
+
+        # Solicitar al usuario el tipo de gráfico deseado
+        tipo_grafico = input("Seleccione el tipo de gráfico (barras_agrupadas/broken_barh/coherencia/fill_between/csd): ").lower()
+
+        # Llamar a la función para seleccionar y mostrar el gráfico
+        seleccionar_grafico(tipo_grafico, detalles_pagos)
 
         # Imprimir el interés total pagado
         print("Interés total pagado:", interes_total_pagado)
 
-        # Imprimir los detalles de cada pago
+        # Mostrar los detalles de cada pago en la consola
         print("Detalles de cada pago:")
         print("Pago\tCuota\tSaldo\tInteres\tAmortizacion")
         for pago, cuota, saldo, interes, amortizacion in detalles_pagos:
             print(f"{pago}\t{cuota:.2f}\t{saldo:.2f}\t{interes:.2f}\t{amortizacion:.2f}")
 
-        # Solicitar el nombre del archivo CSV al usuario
-        csv_path = os.path.join(os.getcwd(), input("Ingrese el nombre del archivo:") + '.csv')
-
-        # Exportar los detalles de cada pago a un archivo CSV
-        exportar_a_csv(detalles_pagos, csv_path)
-
-        # Graficar los detalles de amortización
-        graficar_amortizacion(detalles_pagos)
+        if formato_exportacion == 'csv':
+            lista_datos = crear_lista_datos(detalles_pagos)
+            with open(file_name, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerows(lista_datos)
+            print(f"Los detalles de cada pago se han exportado a '{file_name}' en formato CSV.")
+        elif formato_exportacion == 'pdf':
+            exportar_a_pdf(detalles_pagos, file_name, color1=colors.beige, color2=colors.white)
+        elif formato_exportacion == 'excel':
+            exportar_a_excel(detalles_pagos, file_name, color1='DDDDDD', color2='FFFFFF')
+        else:
+            raise ValueError("Formato de exportación no válido. Por favor, seleccione CSV, PDF o Excel.")
 
     except ValueError as e:
         print("Error:", e)
 
-# Ejecutar la función principal si este script se ejecuta como programa principal
+# Llamar a la función principal
 if __name__ == "__main__":
     main()
